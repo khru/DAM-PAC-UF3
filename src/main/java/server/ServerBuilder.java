@@ -1,13 +1,14 @@
 package server;
 
 import shared.Connection;
+import shared.ConnectionDTO;
 import shared.Printable;
 
 import java.util.Optional;
 
 public class ServerBuilder {
     private Printable console;
-    private Connection connection;
+    private ServerConnection connection;
     private Boolean testMode;
 
     public ServerBuilder setConsole(Printable console) {
@@ -15,7 +16,7 @@ public class ServerBuilder {
         return this;
     }
 
-    public ServerBuilder setConnection(Connection connection) {
+    public ServerBuilder setConnection(ServerConnection connection) {
         this.connection = connection;
         return this;
     }

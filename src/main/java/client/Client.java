@@ -1,15 +1,11 @@
 package client;
 
 import server.Task;
-import shared.Connection;
 import shared.ConnectionMessages;
 import shared.Messages;
 import shared.Printable;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,14 +19,13 @@ public class Client implements Runnable {
 
     private final Logger logger = Logger.getLogger(Client.class.getName());
     private final Printable console;
-    private final Connection connection;
+    private final ClientConnection connection;
     private final String username;
     private List<Task> tasks;
-    Socket client;
 
     private final Integer taskToDo;
 
-    public Client(Printable console, Connection connection, String username, Optional<List<Task>> tasks) {
+    public Client(Printable console, ClientConnection connection, String username, Optional<List<Task>> tasks) {
         this.console = console;
         this.connection = connection;
         this.username = username;
@@ -38,63 +33,55 @@ public class Client implements Runnable {
         this.taskToDo = this.tasks.isEmpty() ? 1 : this.tasks.size();
     }
 
-    private void connect() throws IOException {
-        client = new Socket(connection.ip(), Integer.parseInt(connection.port()));
-        console.println(ConnectionMessages.CLIENT_STARTED.toString());
-    }
-
     @Override
     public void run() {
-        try
-        {
-            connect();
-            DataOutputStream serverOutput = new DataOutputStream(client.getOutputStream());
-            DataInputStream serverInput = new DataInputStream(client.getInputStream());
+        try {
+            connection.connect();
 
-            String requestUserName = serverInput.readUTF();
+            String requestUserName = connection.bus().input();
             console.println(requestUserName);
 
-            serverOutput.writeUTF(username);
+            connection.bus().output(username);
 
-            String requestNumerOfTasks = serverInput.readUTF();
+            String requestNumerOfTasks = connection.bus().input();
             console.println(requestNumerOfTasks);
 
-            serverOutput.writeUTF(String.valueOf(taskToDo));
+            connection.bus().output(String.valueOf(taskToDo));
 
             askTaskIfNotProvide();
-            sendTaskToServer(serverOutput, serverInput);
+            sendTaskToServer();
 
-            String taskSentByTheServer = serverInput.readUTF();
+            String taskSentByTheServer = connection.bus().input();
             console.println(taskSentByTheServer);
 
-            client.close();
+        } catch (IOException connectException) {
+            logger.log(Level.SEVERE, "Client error", connectException);
+        } finally {
+            connection.disconnect();
             console.println(ConnectionMessages.CLIENT_DISCONNECTED.toString());
-        }
-        catch (IOException connectException) {
-            logger.log(Level.SEVERE,"Client error", connectException);
         }
     }
 
-    private void sendTaskToServer(DataOutputStream serverOutput, DataInputStream serverInput) throws IOException {
+    private void sendTaskToServer() throws IOException {
         for (Task task : tasks) {
-            String taskUnderProcess = serverInput.readUTF();
+            String taskUnderProcess = connection.bus().input();
             console.println(Messages.TASK_UNDER_PROCESS + " " + taskUnderProcess);
 
-            String serverRequestDescription = serverInput.readUTF();
+            String serverRequestDescription = connection.bus().input();
             console.println(serverRequestDescription);
 
-            serverOutput.writeUTF(task.description());
+            connection.bus().output(task.description());
 
-            String serverRequestStatus = serverInput.readUTF();
+            String serverRequestStatus = connection.bus().input();
             console.println(serverRequestStatus);
-            serverOutput.writeUTF(task.state());
+            connection.bus().output(task.state());
         }
     }
 
     private void askTaskIfNotProvide() {
         if (tasks.size() == 0) {
             tasks = new ArrayList<>();
-            for (int i = 0; i < taskToDo ;i++) {
+            for (int i = 0; i < taskToDo; i++) {
                 Scanner scanner = new Scanner(System.in);
                 console.println("Cuál es la descripción de la tarea");
                 String description = scanner.nextLine();

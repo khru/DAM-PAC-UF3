@@ -1,7 +1,7 @@
 package server;
 
 import io.github.cdimascio.dotenv.Dotenv;
-import shared.Connection;
+import shared.ConnectionDTO;
 import shared.Console;
 
 public class Main {
@@ -9,13 +9,15 @@ public class Main {
         Dotenv dotenv = Dotenv.load();
         String port = dotenv.get("SERVER_PORT");
         String ip = dotenv.get("SERVER_IP");
+        Console serverConsole = new Console();
+
+        ServerConnection connection = new ServerConnection(port, serverConsole);
 
         Server server = new ServerBuilder()
-                            .setConsole(new Console())
-                            .setConnection(new Connection(ip, port))
+                            .setConsole(serverConsole)
+                            .setConnection(connection)
                             .createServer();
 
-        server.connect();
         server.run();
     }
 }
