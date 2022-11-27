@@ -41,7 +41,7 @@ public class Server implements Runnable  {
     }
 
     public void disconnect() {
-        if (null == server || server.isClosed()) {
+        if (isServerConnected()) {
             return;
         }
 
@@ -93,9 +93,13 @@ public class Server implements Runnable  {
     }
 
     private void connectServerIfNotConnected() {
-        if (null == server || server.isClosed()) {
+        if (isServerConnected()) {
             connect();
         }
+    }
+
+    private boolean isServerConnected() {
+        return null == server || server.isClosed();
     }
 
     private void responseTaskReceived(DataOutputStream clientOutput, List<Task> tasks) throws IOException {
