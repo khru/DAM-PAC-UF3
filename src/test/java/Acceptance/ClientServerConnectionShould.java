@@ -4,6 +4,7 @@ import client.Client;
 import client.ClientBuilder;
 import client.ClientConnection;
 import io.github.cdimascio.dotenv.Dotenv;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -28,37 +29,48 @@ public class ClientServerConnectionShould {
     Dotenv dotenv;
     Server server;
 
-    Printable serverConsole = mock(Printable.class);
-    Printable clientConsole = mock(Printable.class);
+    Printable serverConsole;
+    Printable clientConsole;
     String port;
+    ServerConnection serverConnection;
 
-    ServerConnection connection;
+    Thread serverProcess;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws InterruptedException {
         dotenv = Dotenv.load();
         Boolean testMode = true;
         port = dotenv.get("SERVER_PORT");
         serverConsole = mock(Printable.class);
         clientConsole = mock(Printable.class);
-        ServerConnection connection = new ServerConnection(port, serverConsole);
+        serverConnection = new ServerConnection(port, serverConsole);
 
         server = new ServerBuilder()
             .setConsole(serverConsole)
-            .setConnection(connection)
+            .setConnection(serverConnection)
             .setTestMode(testMode)
             .createServer();
         // must not block main thread
-        Thread serverProcess = new Thread(server);
+        serverProcess = new Thread(server);
         serverProcess.start();
+        Thread.sleep(100);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        serverConnection.closeSocket();
+        serverConnection.disconnect();
+        if (serverProcess.isAlive()) {
+            serverProcess.interrupt();
+        }
     }
 
     @ParameterizedTest
     @MethodSource("generateTasks")
-    public void connect_send_a_username_and_a_list_of_task_and_expects_the_client_to_receive_it(List<Task> taskToDo) {
+    public synchronized void connect_send_a_username_and_a_list_of_task_and_expects_the_client_to_receive_it(List<Task> taskToDo) {
         String ip = dotenv.get("SERVER_IP");
         String username = "A_RANDOM_USER_NAME";
-        ClientConnection connection = new ClientConnection(new ConnectionDTO(ip, port), clientConsole);
+        ClientConnection clientConnection = new ClientConnection(new ConnectionDTO(ip, port), clientConsole);
         String expectedOutputOfTask = taskToDo.toString();
 
         List<Task> task = new ArrayList<>(taskToDo);
@@ -66,11 +78,10 @@ public class ClientServerConnectionShould {
 
         Client client = new ClientBuilder()
             .setConsole(clientConsole)
-            .setConnection(connection)
+            .setConnection(clientConnection)
             .setUsername(username)
             .setTasks(task)
             .createClient();
-
 
         verify(serverConsole).println(ConnectionMessages.SERVER_STARTED.toString());
         client.run();
@@ -80,6 +91,7 @@ public class ClientServerConnectionShould {
         verify(clientConsole).println(expectedOutputOfTask);
         verify(serverConsole).println(ConnectionMessages.CLIENT_DISCONNECTED.toString());
         verify(serverConsole).println(ConnectionMessages.SERVER_STOPPED.toString());
+        clientConnection.disconnect();
     }
 
     private static Stream<Arguments> generateTasks() {
