@@ -1,4 +1,8 @@
 package shared;
 
-public record Connection(String ip, String port) {
+public interface Connection {
+    public void connect();
+    public void disconnect();
+
+    public Communication bus();
 }

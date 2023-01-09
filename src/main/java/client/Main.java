@@ -1,7 +1,7 @@
 package client;
 
 import io.github.cdimascio.dotenv.Dotenv;
-import shared.Connection;
+import shared.ConnectionDTO;
 import shared.Console;
 
 public class Main {
@@ -10,10 +10,13 @@ public class Main {
         String port = dotenv.get("SERVER_PORT");
         String ip = dotenv.get("SERVER_IP");
         String username = "A_RANDOM_USER_NAME";
+        Console console = new Console();
+
+        ClientConnection connection = new ClientConnection(new ConnectionDTO(ip, port), console);
 
         Client client = new ClientBuilder()
-                            .setConsole(new Console())
-                            .setConnection(new Connection(ip, port))
+                            .setConsole(console)
+                            .setConnection(connection)
                             .setUsername(username)
                             .createClient();
 

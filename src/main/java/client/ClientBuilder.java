@@ -1,7 +1,7 @@
 package client;
 
 import server.Task;
-import shared.Connection;
+import shared.ConnectionDTO;
 import shared.Printable;
 
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public class ClientBuilder {
     private Printable console;
-    private Connection connection;
+    private ClientConnection connection;
     private String username;
     private List<Task> tasks;
 
@@ -18,7 +18,7 @@ public class ClientBuilder {
         return this;
     }
 
-    public ClientBuilder setConnection(Connection connection) {
+    public ClientBuilder setConnection(ClientConnection connection) {
         this.connection = connection;
         return this;
     }
